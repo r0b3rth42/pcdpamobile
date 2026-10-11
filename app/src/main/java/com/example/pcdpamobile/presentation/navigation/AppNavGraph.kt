@@ -6,7 +6,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.pcdpamobile.presentation.auth.LoginScreen
 import com.example.pcdpamobile.presentation.auth.RegisterScreen
-import com.example.pcdpamobile.presentation.jugada.RegistroJugadaScreen
 
 
 @Composable
@@ -19,6 +18,6 @@ fun AppNavGraph () {
     ) {
         composable("login") { LoginScreen(navController) }
         composable("register") { RegisterScreen(navController) }
-        composable("registro_jugada") { RegistroJugadaScreen(navController) }
+        composable("main") { MainScreen(navController) }
     }
 }
