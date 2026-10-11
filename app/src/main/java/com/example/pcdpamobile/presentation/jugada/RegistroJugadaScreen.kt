@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegistroJugadaScreen(navController: NavController) {
+fun RegistroJugadaScreen(navController: NavController, sorteoName: String = "Registro de Jugada") {
     val selectedNumbers = remember { mutableStateListOf<Int>() }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -43,7 +43,7 @@ fun RegistroJugadaScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Registrar Jugada", fontWeight = FontWeight.Bold) },
+                title = { Text(sorteoName, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar")
@@ -239,6 +239,7 @@ fun RegistroJugadaScreen(navController: NavController) {
                         val userId = auth.currentUser?.uid ?: "anonymous_user"
                         val jugadaMap = mapOf(
                             "userId" to userId,
+                            "sorteoName" to sorteoName,
                             "numbers" to selectedNumbers.sorted(),
                             "createdAt" to System.currentTimeMillis()
                         )

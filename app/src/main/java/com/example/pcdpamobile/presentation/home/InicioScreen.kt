@@ -1,14 +1,17 @@
 package com.example.pcdpamobile.presentation.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,13 +26,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 data class SorteoModel(
     val id: String = "",
     val name: String = "",
     val date: String = "",
-    val status: String = "Disponible"
+    val status: String = "Abierto"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,42 +45,72 @@ fun InicioScreen(navController: NavController) {
 
     var sorteosList by remember { mutableStateOf<List<SorteoModel>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var actionMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        try {
-            val snapshot = firestore.collection("sorteos").get().await()
-            if (!snapshot.isEmpty) {
+    // Función para cargar sorteos desde Firestore
+    fun fetchSorteos() {
+        scope.launch {
+            isLoading = true
+            try {
+                val snapshot = firestore.collection("sorteos").get().await()
                 val list = snapshot.documents.map { doc ->
                     SorteoModel(
                         id = doc.id,
-                        name = doc.getString("name") ?: "Sorteo Principal",
+                        name = doc.getString("name") ?: "Sorteo",
                         date = doc.getString("date") ?: "Próximamente",
-                        status = doc.getString("status") ?: "Disponible"
+                        status = doc.getString("status") ?: "Abierto"
                     )
                 }
                 sorteosList = list
-            } else {
-                sorteosList = listOf(
-                    SorteoModel("1", "Sorteo Extraordinario #45", "Domingo, 21:00 hrs", "Abierto"),
-                    SorteoModel("2", "Sorteo Pozo Millonario", "Miércoles, 22:00 hrs", "Próximamente")
-                )
+            } catch (e: Exception) {
+                actionMessage = "Error al cargar sorteos: ${e.localizedMessage}"
             }
-        } catch (_: Exception) {
-            sorteosList = listOf(
-                SorteoModel("1", "Sorteo Extraordinario #45", "Domingo, 21:00 hrs", "Abierto"),
-                SorteoModel("2", "Sorteo Pozo Millonario", "Miércoles, 22:00 hrs", "Próximamente")
-            )
+            isLoading = false
         }
-        isLoading = false
+    }
+
+    // Función para registrar sorteos de ejemplo en Firestore
+    fun seedSorteosToFirebase() {
+        scope.launch {
+            isLoading = true
+            try {
+                val sorteo1 = mapOf("name" to "Sorteo Extraordinario #45", "date" to "Domingo, 21:00 hrs", "status" to "Abierto")
+                val sorteo2 = mapOf("name" to "Sorteo Pozo Millonario", "date" to "Miércoles, 22:00 hrs", "status" to "Abierto")
+                
+                firestore.collection("sorteos").add(sorteo1).await()
+                firestore.collection("sorteos").add(sorteo2).await()
+
+                actionMessage = "¡Sorteos registrados en Firebase con éxito!"
+                fetchSorteos()
+            } catch (e: Exception) {
+                actionMessage = "Error al registrar sorteos: ${e.localizedMessage}"
+                isLoading = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        fetchSorteos()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Inicio / Perfil", fontWeight = FontWeight.Bold) },
+                actions = {
+                    // Botón para registrar sorteos en Firebase
+                    IconButton(onClick = { seedSorteosToFirebase() }) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Registrar Sorteos en Firebase")
+                    }
+                    IconButton(onClick = { fetchSorteos() }) {
+                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Actualizar")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF6A11CB),
-                    titleContentColor = Color.White
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White
                 )
             )
         }
@@ -168,10 +202,20 @@ fun InicioScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Sorteos Disponibles",
+                        text = "Sorteos Disponibles en Firebase",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1E293B)
+                    )
+                }
+
+                if (actionMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = actionMessage!!,
+                        color = Color(0xFF10B981),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -180,6 +224,29 @@ fun InicioScreen(navController: NavController) {
                 if (isLoading) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color(0xFF6A11CB))
+                    }
+                } else if (sorteosList.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "No hay sorteos registrados en Firebase.",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = { seedSorteosToFirebase() },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A11CB)),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Registrar Sorteos")
+                            }
+                        }
                     }
                 } else {
                     LazyColumn(
@@ -190,7 +257,17 @@ fun InicioScreen(navController: NavController) {
                     ) {
                         items(sorteosList) { sorteo ->
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (sorteo.status.equals("Abierto", ignoreCase = true)) {
+                                            navController.navigate("mi_jugada") {
+                                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        }
+                                    },
                                 shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color.White),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
