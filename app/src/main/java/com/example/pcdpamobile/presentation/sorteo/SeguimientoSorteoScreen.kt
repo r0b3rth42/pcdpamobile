@@ -76,7 +76,28 @@ fun SeguimientoSorteoScreen(navController: NavController) {
         isLoadingUserNumbers = false
     }
 
-    // Función para iniciar el sorteo en tiempo real
+    // Listener en Tiempo Real (Real-Time) de Firebase para el Sorteo en Vivo
+    DisposableEffect(Unit) {
+        val docRef = firestore.collection("sorteo_activo").document("actual")
+        val listener = docRef.addSnapshotListener { snapshot, e ->
+            if (e != null) return@addSnapshotListener
+            if (snapshot != null && snapshot.exists()) {
+                val balls = (snapshot.get("drawnBalls") as? List<*>)?.mapNotNull { (it as? Long)?.toInt() } ?: emptyList()
+                val drawing = snapshot.getBoolean("isDrawing") ?: false
+                val finished = snapshot.getBoolean("drawFinished") ?: false
+
+                drawnBalls.clear()
+                drawnBalls.addAll(balls)
+                isDrawing = drawing
+                drawFinished = finished
+            }
+        }
+        onDispose {
+            listener.remove()
+        }
+    }
+
+    // Función para iniciar el sorteo en tiempo real (Sincronizado globalmente en Firestore)
     fun startDraw() {
         if (userNumbers.isEmpty()) {
             errorMessage = "No tienes una jugada registrada para comparar."
@@ -85,26 +106,49 @@ fun SeguimientoSorteoScreen(navController: NavController) {
         if (isDrawing) return
 
         scope.launch {
-            drawnBalls.clear()
-            isDrawing = true
-            drawFinished = false
             errorMessage = null
+            val docRef = firestore.collection("sorteo_activo").document("actual")
 
             val availablePool = (1..45).shuffled().take(6)
+            val currentDrawn = mutableListOf<Int>()
+
+            // Inicializar sorteo en Firestore para todos los usuarios conectados
+            docRef.set(
+                mapOf(
+                    "isDrawing" to true,
+                    "drawFinished" to false,
+                    "drawnBalls" to emptyList<Int>(),
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            ).await()
 
             for (ball in availablePool) {
                 delay(1500L) // 1.5 segundos por bolilla en tiempo real
-                drawnBalls.add(ball)
+                currentDrawn.add(ball)
+                docRef.update(
+                    mapOf(
+                        "drawnBalls" to currentDrawn.toList(),
+                        "isDrawing" to true,
+                        "drawFinished" to false,
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+                ).await()
             }
 
-            isDrawing = false
-            drawFinished = true
+            // Marcar como finalizado en Firestore
+            docRef.update(
+                mapOf(
+                    "isDrawing" to false,
+                    "drawFinished" to true,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            ).await()
 
-            // Guardar resultado del sorteo en la colección "ResultadoSorteo" en Firebase
+            // Guardar resultado del sorteo en la colección "ResultadoSorteo" en Firebase para este usuario
             val userId = auth.currentUser?.uid
             if (userId != null) {
                 try {
-                    val matches = drawnBalls.intersect(userNumbers.toSet())
+                    val matches = currentDrawn.intersect(userNumbers.toSet())
                     val matchCount = matches.size
                     val resultStatus = when {
                         matchCount == 6 -> "GANADOR"
@@ -116,7 +160,7 @@ fun SeguimientoSorteoScreen(navController: NavController) {
                         "userId" to userId,
                         "sorteoName" to latestSorteoName,
                         "userNumbers" to userNumbers,
-                        "drawnBalls" to drawnBalls.toList(),
+                        "drawnBalls" to currentDrawn.toList(),
                         "matchCount" to matchCount,
                         "resultStatus" to resultStatus,
                         "createdAt" to System.currentTimeMillis()
@@ -125,9 +169,7 @@ fun SeguimientoSorteoScreen(navController: NavController) {
                     firestore.collection("ResultadoSorteo")
                         .add(resultadoMap)
                         .await()
-                } catch (_: Exception) {
-                    // Manejo silencioso o error de red
-                }
+                } catch (_: Exception) {}
             }
         }
     }
@@ -415,7 +457,7 @@ fun SeguimientoSorteoScreen(navController: NavController) {
                         imageVector = if (drawFinished) Icons.Default.Refresh else Icons.Default.PlayArrow,
                         contentDescription = null
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = if (drawFinished) "Reiniciar Sorteo" else "Iniciar Sorteo en Vivo",
                         fontSize = 16.sp,
