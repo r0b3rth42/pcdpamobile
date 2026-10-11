@@ -99,6 +99,36 @@ fun SeguimientoSorteoScreen(navController: NavController) {
 
             isDrawing = false
             drawFinished = true
+
+            // Guardar resultado del sorteo en la colección "ResultadoSorteo" en Firebase
+            val userId = auth.currentUser?.uid
+            if (userId != null) {
+                try {
+                    val matches = drawnBalls.intersect(userNumbers.toSet())
+                    val matchCount = matches.size
+                    val resultStatus = when {
+                        matchCount == 6 -> "GANADOR"
+                        matchCount >= 4 -> "¡GRAN PREMIO!"
+                        else -> "SIGUE INTENTANDO"
+                    }
+
+                    val resultadoMap = mapOf(
+                        "userId" to userId,
+                        "sorteoName" to latestSorteoName,
+                        "userNumbers" to userNumbers,
+                        "drawnBalls" to drawnBalls.toList(),
+                        "matchCount" to matchCount,
+                        "resultStatus" to resultStatus,
+                        "createdAt" to System.currentTimeMillis()
+                    )
+
+                    firestore.collection("ResultadoSorteo")
+                        .add(resultadoMap)
+                        .await()
+                } catch (_: Exception) {
+                    // Manejo silencioso o error de red
+                }
+            }
         }
     }
 
