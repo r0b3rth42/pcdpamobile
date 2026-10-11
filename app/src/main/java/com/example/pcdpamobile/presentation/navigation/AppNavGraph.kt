@@ -18,6 +18,6 @@ fun AppNavGraph () {
     ) {
         composable("login") { LoginScreen(navController) }
         composable("register") { RegisterScreen(navController) }
-        composable("main") { MainScreen(navController) }
+        composable("main") { MainScreen() }
     }
 }

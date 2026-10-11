@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -19,9 +18,10 @@ import androidx.navigation.compose.rememberNavController
 import com.example.pcdpamobile.presentation.home.InicioScreen
 import com.example.pcdpamobile.presentation.jugada.RegistroJugadaScreen
 import com.example.pcdpamobile.presentation.sorteo.SeguimientoSorteoScreen
+import java.net.URLDecoder
 
 @Composable
-fun MainScreen(rootNavController: NavController) {
+fun MainScreen() {
     val bottomNavController = rememberNavController()
 
     Scaffold(
@@ -58,7 +58,7 @@ fun MainScreen(rootNavController: NavController) {
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.List, contentDescription = "Mi Jugada") },
                     label = { Text("Mi Jugada") },
-                    selected = currentRoute == "mi_jugada",
+                    selected = currentRoute == "mi_jugada" || currentRoute?.startsWith("mi_jugada") == true,
                     onClick = {
                         if (currentRoute != "mi_jugada") {
                             bottomNavController.navigate("mi_jugada") {
@@ -108,9 +108,18 @@ fun MainScreen(rootNavController: NavController) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            composable("inicio") { InicioScreen(rootNavController) }
-            composable("mi_jugada") { RegistroJugadaScreen(rootNavController) }
-            composable("sorteo_vivo") { SeguimientoSorteoScreen(rootNavController) }
+            composable("inicio") { InicioScreen(bottomNavController) }
+            composable("mi_jugada") { RegistroJugadaScreen(bottomNavController, "Registro de Jugada") }
+            composable("mi_jugada/{sorteoName}") { backStackEntry ->
+                val encodedName = backStackEntry.arguments?.getString("sorteoName") ?: "Registro de Jugada"
+                val decodedName = try {
+                    URLDecoder.decode(encodedName, "UTF-8")
+                } catch (_: Exception) {
+                    encodedName
+                }
+                RegistroJugadaScreen(bottomNavController, decodedName)
+            }
+            composable("sorteo_vivo") { SeguimientoSorteoScreen(bottomNavController) }
         }
     }
 }
