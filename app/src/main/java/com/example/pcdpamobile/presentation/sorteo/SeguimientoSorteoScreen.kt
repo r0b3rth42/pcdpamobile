@@ -36,6 +36,7 @@ import kotlinx.coroutines.tasks.await
 @Composable
 fun SeguimientoSorteoScreen(navController: NavController) {
     var userNumbers by remember { mutableStateOf<List<Int>>(emptyList()) }
+    var latestSorteoName by remember { mutableStateOf("Sorteo Activo") }
     val drawnBalls = remember { mutableStateListOf<Int>() }
     var isDrawing by remember { mutableStateOf(false) }
     var drawFinished by remember { mutableStateOf(false) }
@@ -46,7 +47,7 @@ fun SeguimientoSorteoScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
 
-    // Cargar la jugada del usuario desde Firestore al iniciar
+    // Cargar la última jugada del historial del usuario desde Firestore al iniciar
     LaunchedEffect(Unit) {
         val userId = auth.currentUser?.uid
         if (userId != null) {
@@ -62,8 +63,10 @@ fun SeguimientoSorteoScreen(navController: NavController) {
                     }
                     val latestDoc = documents.first()
                     val numbers = latestDoc.get("numbers") as? List<Long>
+                    val sorteoName = latestDoc.getString("sorteoName") ?: "Sorteo Activo"
                     if (numbers != null) {
                         userNumbers = numbers.map { it.toInt() }
+                        latestSorteoName = sorteoName
                     }
                 }
             } catch (e: Exception) {
@@ -193,7 +196,7 @@ fun SeguimientoSorteoScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Mis Números Jugados
+                // Mis Números Jugados (Última Jugada del Historial)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -205,10 +208,17 @@ fun SeguimientoSorteoScreen(navController: NavController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Tu Jugada Registrada",
+                            text = "Última Jugada Registrada",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = latestSorteoName,
+                            fontSize = 13.sp,
+                            color = Color(0xFF38BDF8),
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -216,7 +226,7 @@ fun SeguimientoSorteoScreen(navController: NavController) {
                             CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color(0xFF38BDF8))
                         } else if (userNumbers.isEmpty()) {
                             Text(
-                                text = "No tienes números registrados. Registra una jugada primero.",
+                                text = "No tienes jugadas registradas en tu historial.",
                                 fontSize = 13.sp,
                                 color = Color(0xFFEF4444),
                                 textAlign = TextAlign.Center
