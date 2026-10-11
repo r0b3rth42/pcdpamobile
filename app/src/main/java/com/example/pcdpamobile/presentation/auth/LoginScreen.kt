@@ -152,7 +152,7 @@ fun LoginScreen(navController: NavController) {
                             val result = FirebaseAuthManager.loginUser(email.trim(), password)
                             isLoading = false
                             if (result.isSuccess) {
-                                navController.navigate("registro_jugada") {
+                                navController.navigate("main") {
                                     popUpTo("login") { inclusive = true }
                                 }
                             } else {
