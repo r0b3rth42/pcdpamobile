@@ -1,4 +1,4 @@
 ## INTEGRANTES
 
-Roberth Angel Irazaba Garcia
+Roberth Angel Irazaba Garcia <BR>
 Rodrigo Hurtado
