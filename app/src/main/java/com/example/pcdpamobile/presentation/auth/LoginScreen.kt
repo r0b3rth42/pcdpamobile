@@ -149,7 +149,9 @@ fun LoginScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(text = "¿No tienes cuenta?", fontSize = 13.sp, color = Color.Gray)
-                    TextButton(onClick = { /* Acción para registro */ }) {
+                    TextButton(onClick = {
+                        navController.navigate("register")
+                    }) {
                         Text(
                             text = "Regístrate",
                             fontSize = 13.sp,
