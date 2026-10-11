@@ -22,12 +22,17 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pcdpamobile.data.remote.FirebaseAuthManager
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     // Fondo con degradado elegante
     Box(
@@ -111,6 +116,15 @@ fun LoginScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp
+                    )
+                }
+
                 // Olvidé mi contraseña
                 TextButton(
                     onClick = { /* Acción para recuperar contraseña */ },
@@ -127,19 +141,46 @@ fun LoginScreen(navController: NavController) {
 
                 // Botón principal
                 Button(
-                    onClick = { /* Acción de Inicio de Sesión */ },
+                    onClick = {
+                        if (email.isBlank() || password.isBlank()) {
+                            errorMessage = "Por favor completa todos los campos"
+                            return@Button
+                        }
+                        isLoading = true
+                        errorMessage = null
+                        scope.launch {
+                            val result = FirebaseAuthManager.loginUser(email.trim(), password)
+                            isLoading = false
+                            if (result.isSuccess) {
+                                navController.navigate("registro_jugada") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            } else {
+                                errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Error al iniciar sesión"
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2575FC))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2575FC)),
+                    enabled = !isLoading
                 ) {
-                    Text(
-                        text = "Iniciar Sesión",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Iniciar Sesión",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
