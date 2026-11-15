@@ -19,9 +19,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.pcdpamobile.presentation.home.InicioScreen
-import com.example.pcdpamobile.presentation.jugada.RegistroHistoricoJugadasScreen
-import com.example.pcdpamobile.presentation.jugada.RegistroJugadaScreen
-import com.example.pcdpamobile.presentation.sorteo.SeguimientoSorteoScreen
 import java.net.URLDecoder
 
 @Composable
@@ -151,10 +148,8 @@ fun MainScreen() {
                 } catch (_: Exception) {
                     rawName
                 }
-                RegistroJugadaScreen(bottomNavController, decodedName)
+
             }
-            composable("historico_jugadas") { RegistroHistoricoJugadasScreen(bottomNavController) }
-            composable("sorteo_vivo") { SeguimientoSorteoScreen(bottomNavController) }
         }
     }
 }
